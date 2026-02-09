@@ -1,7 +1,12 @@
 {
-    "name": "visio-soft/horizon-pg",
+    "name": "emrullahardc/horizon-pg",
     "description": "Laravel Horizon dashboard and queue monitoring for PostgreSQL",
-    "keywords": ["laravel", "horizon", "postgresql", "queue"],
+    "keywords": [
+        "laravel",
+        "horizon",
+        "postgresql",
+        "queue"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",

@@ -44,15 +44,7 @@ class DatabaseQueue extends BaseQueue
     #[\Override]
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $jobPayload = (new JobPayload($payload))->prepare($this->lastPushed);
-
-        $this->event($this->getQueue($queue), new JobPending($jobPayload->value));
-
-        $result = parent::pushRaw($jobPayload->value, $queue, $options);
-
-        $this->event($this->getQueue($queue), new JobPushed($jobPayload->value));
-
-        return $jobPayload->id();
+        return $this->pushToDatabase($queue, $payload, $options['delay'] ?? 0, $options['attempts'] ?? 0);
     }
 
     #[\Override]
@@ -70,19 +62,13 @@ class DatabaseQueue extends BaseQueue
     {
         $this->lastPushed = $job;
 
-        $payload = (new JobPayload($this->createPayload($job, $this->getQueue($queue), $data)))->prepare($job)->value;
-
         return $this->enqueueUsing(
             $job,
-            $payload,
+            $this->createPayload($job, $this->getQueue($queue), $data),
             $queue,
             $delay,
             function ($payload, $queue, $delay) {
-                $this->event($this->getQueue($queue), new JobPending($payload));
-
-                return tap(parent::laterRaw($delay, $payload, $queue), function () use ($payload, $queue) {
-                    $this->event($this->getQueue($queue), new JobPushed($payload));
-                });
+                return $this->pushToDatabase($queue, $payload, $delay);
             }
         );
     }
@@ -100,18 +86,18 @@ class DatabaseQueue extends BaseQueue
     #[\Override]
     public function deleteReserved($queue, $id)
     {
-        $job = null;
+        $rawBody = null;
 
-        // Try to get the raw body before deleting
         if (is_object($id) && method_exists($id, 'getRawBody')) {
-            $job = $id;
             $rawBody = $id->getRawBody();
+        } else {
+            $rawBody = $this->database->table($this->table)->where('id', $id)->value('payload');
         }
 
         parent::deleteReserved($queue, $id);
 
-        if (isset($rawBody)) {
-            $this->event($this->getQueue($queue), new JobDeleted($job, $rawBody));
+        if ($rawBody) {
+            $this->event($this->getQueue($queue), new JobDeleted(null, $rawBody));
         }
     }
 
@@ -125,13 +111,13 @@ class DatabaseQueue extends BaseQueue
         }
     }
 
-    protected function pushToDatabase($queue, $payload)
+    protected function pushToDatabase($queue, $payload, $delay = 0, $attempts = 0)
     {
         $jobPayload = (new JobPayload($payload))->prepare($this->lastPushed);
 
         $this->event($this->getQueue($queue), new JobPending($jobPayload->value));
 
-        $result = parent::pushRaw($jobPayload->value, $queue);
+        parent::pushToDatabase($queue, $jobPayload->value, $delay, $attempts);
 
         $this->event($this->getQueue($queue), new JobPushed($jobPayload->value));
 

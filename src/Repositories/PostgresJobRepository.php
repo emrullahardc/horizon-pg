@@ -14,8 +14,17 @@ class PostgresJobRepository implements JobRepository
     public $db;
 
     public $keys = [
-        'id', 'connection', 'queue', 'name', 'status', 'payload',
-        'exception', 'context', 'failed_at', 'completed_at', 'retried_by',
+        'id',
+        'connection',
+        'queue',
+        'name',
+        'status',
+        'payload',
+        'exception',
+        'context',
+        'failed_at',
+        'completed_at',
+        'retried_by',
         'reserved_at',
     ];
 
@@ -29,6 +38,10 @@ class PostgresJobRepository implements JobRepository
     public function __construct(ConnectionInterface $db)
     {
         $this->db = $db;
+
+        if ($this->connection()->getDriverName() === 'pgsql') {
+            $this->db->statement('SET synchronous_commit = off');
+        }
         $this->recentJobExpires = (int) config('horizon.trim.recent', 60);
         $this->pendingJobExpires = (int) config('horizon.trim.pending', 60);
         $this->completedJobExpires = (int) config('horizon.trim.completed', 60);
@@ -39,7 +52,11 @@ class PostgresJobRepository implements JobRepository
 
     public function nextJobId()
     {
-        return (string) $this->connection()->selectOne("SELECT nextval('horizon_job_id_seq') as id")->id;
+        if ($this->connection()->getDriverName() === 'pgsql') {
+            return (string) $this->connection()->selectOne("SELECT nextval('horizon_job_id_seq') as id")->id;
+        }
+
+        return (string) \Illuminate\Support\Str::uuid();
     }
 
     public function totalRecent()
@@ -196,7 +213,7 @@ class PostgresJobRepository implements JobRepository
             ->keyBy('id');
 
         return collect($ids)
-            ->map(fn ($id) => $jobs->get($id))
+            ->map(fn($id) => $jobs->get($id))
             ->filter()
             ->values()
             ->map(function ($job) use (&$indexFrom) {
@@ -320,7 +337,9 @@ class PostgresJobRepository implements JobRepository
 
         if ($retriedBy) {
             $retries = $this->updateRetryStatus(
-                $payload, json_decode($retriedBy, true), $failed
+                $payload,
+                json_decode($retriedBy, true),
+                $failed
             );
 
             $this->connection()->table('horizon_jobs')
@@ -380,7 +399,7 @@ class PostgresJobRepository implements JobRepository
             ->where('id', $id)
             ->first();
 
-        if (! $job || $job->status !== 'failed') {
+        if (!$job || $job->status !== 'failed') {
             return null;
         }
 
