@@ -1,0 +1,46 @@
+{
+    "name": "visio-soft/horizon-pg",
+    "description": "Laravel Horizon dashboard and queue monitoring for PostgreSQL",
+    "keywords": ["laravel", "horizon", "postgresql", "queue"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "ext-pdo_pgsql": "*",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/events": "^11.0|^12.0",
+        "illuminate/http": "^11.0|^12.0",
+        "illuminate/queue": "^11.0|^12.0",
+        "illuminate/routing": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "nesbot/carbon": "^2.17|^3.0",
+        "symfony/process": "^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "HorizonPg\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HorizonPg\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "HorizonPg\\HorizonServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
